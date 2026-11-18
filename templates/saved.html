@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Збережені записи — Open-Meteo Studio{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div>
+    <h1 class="h3 fw-bold mb-1">Збережені спостереження</h1>
+    <p class="text-muted-custom small mb-0">Локальна база SQLite • Статистика, фільтрація, редагування та видалення записів</p>
+  </div>
+  <a href="{{ url_for('index') }}" class="btn btn-neon btn-sm px-3 py-2">+ Новий пошук</a>
+</div>
+
+{% if request.args.get('saved_id') %}
+  <div class="glass-card p-3 px-4 mb-4" style="border-color: rgba(52, 211, 153, 0.45); color: #a7f3d0;">
+    ✓ Запис успішно збережено до бази даних (ID: <span class="mono">{{ request.args.get('saved_id') }}</span>).
+  </div>
+{% endif %}
+
+{% if filter_error %}
+  <div class="glass-card p-3 px-4 mb-4" style="border-color: rgba(251, 191, 36, 0.45); color: #fde68a;">
+    {{ filter_error }}
+  </div>
+{% endif %}
+
+{% if stats and stats.total_count > 0 %}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="glass-card p-3">
+        <div class="metric-label">Усього записів</div>
+        <div class="h4 fw-bold mono mb-0 mt-1" style="color: #7dd3fc;">{{ stats.total_count }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="glass-card p-3">
+        <div class="metric-label">Середня темп.</div>
+        <div class="h4 fw-bold mono mb-0 mt-1" style="color: #c4b5fd;">{{ stats.avg_temp }} °C</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="glass-card p-3">
+        <div class="metric-label">Мін / Макс темп.</div>
+        <div class="h5 fw-bold mono mb-0 mt-1">{{ stats.min_temp }}° / {{ stats.max_temp }}°</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="glass-card p-3">
+        <div class="metric-label">Сер. вологість / вітер</div>
+        <div class="h5 fw-bold mono mb-0 mt-1">{{ stats.avg_humidity|int }}% • {{ stats.avg_wind }} км/г</div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="glass-card p-4 mb-4">
+  <form method="get" action="{{ url_for('saved_page') }}" class="row g-2">
+    <div class="col-md-5">
+      <input
+        type="text"
+        name="city"
+        class="form-control"
+        placeholder="Пошук за містом..."
+        value="{{ city_filter }}"
+      >
+    </div>
+    <div class="col-md-4">
+      <input
+        type="text"
+        name="min_temp"
+        class="form-control"
+        placeholder="Мін. температура (°C), напр. 0 або -5"
+        value="{{ min_temp_raw }}"
+      >
+    </div>
+    <div class="col-md-3 d-grid">
+      <button type="submit" class="btn btn-neon">Застосувати фільтр</button>
+    </div>
+  </form>
+</div>
+
+{% if records %}
+  <div class="glass-card p-2 p-md-3">
+    <div class="table-responsive">
+      <table class="table table-glass table-hover align-middle mb-0">
+        <thead>
+          <tr class="text-muted-custom small text-uppercase" style="letter-spacing: 0.05em;">
+            <th>ID</th>
+            <th>Локація</th>
+            <th>Темп.</th>
+            <th>Вологість</th>
+            <th>Вітер</th>
+            <th>Стан</th>
+            <th>Редагування</th>
+            <th class="text-end">Дія</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in records %}
+            <tr>
+              <td class="mono text-muted-custom">#{{ rec.id }}</td>
+              <td>
+                <div class="fw-semibold">{{ rec.city }}</div>
+                <div class="small text-muted-custom">{{ rec.country }}</div>
+              </td>
+              <td class="mono fw-semibold" style="color: #7dd3fc;">{{ rec.temperature_c }}°C</td>
+              <td class="mono">{{ rec.humidity_pct }}%</td>
+              <td class="mono">{{ rec.wind_speed_kmh }} км/г</td>
+              <td><span class="condition-badge">{{ rec.weather_condition }}</span></td>
+              <td style="min-width: 260px;">
+                <form method="post" action="{{ url_for('update_saved', forecast_id=rec.id) }}" class="d-flex gap-1">
+                  <input type="text" name="city" value="{{ rec.city }}" class="form-control form-control-sm" required>
+                  <input type="text" name="user_note" value="{{ rec.user_note }}" placeholder="Примітка" class="form-control form-control-sm">
+                  <button type="submit" class="btn btn-sm px-2" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--border-glass); border-radius: 10px;">
+                    Зберегти
+                  </button>
+                </form>
+              </td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('delete_saved', forecast_id=rec.id) }}">
+                  <button type="submit" class="btn btn-sm px-3" style="background: rgba(251, 113, 133, 0.14); color: #fda4af; border: 1px solid rgba(251, 113, 133, 0.35); border-radius: 10px;">
+                    Видалити
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="glass-card p-4 text-muted-custom">
+    Збережених записів за заданими умовами поки немає.
+  </div>
+{% endif %}
+{% endblock %}

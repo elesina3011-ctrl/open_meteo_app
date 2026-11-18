@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+weather_app.db
+*.sqlite3
+.env
